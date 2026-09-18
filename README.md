@@ -1,57 +1,62 @@
-# Resume Analyzer
+# Multi-Agent Resume Analyzer & Job Matcher
 
-A resume-to-job-description analysis pipeline that extracts a candidate profile, categorizes skills, identifies job requirements, evaluates the match, highlights skill gaps, and produces tailored recommendations.
+A 5-agent pipeline that parses a resume, categorizes skills, matches against
+a job description, analyzes skill gaps, and produces a final candidate-job
+match report with actionable recommendations.
 
-## Current repository contents
+```
+RESUME + JOB DESCRIPTION
+   -> Resume Agent        (agents/resume_agent.py)
+   -> Skill Agent         (agents/skill_agent.py)
+   -> Job Match Agent     (agents/job_match_agent.py)
+   -> Gap Agent           (agents/gap_agent.py)
+   -> Recommendation Agent(agents/recommendation_agent.py)
+   -> Final Report        (report.py)
+```
 
-The current upload includes the command-line entry point in `main.py`. It expects these pipeline modules to be present in the same project directory:
-
-- `orchestrator.py` - runs the analysis pipeline
-- `report.py` - formats the human-readable report
-- Supporting model and analysis modules used by the orchestrator
-
-Those supporting modules were not included in the uploaded files yet, so the repository is currently a scaffold and cannot run end-to-end until they are added.
-
-## Intended features
-
-- Parse resume text and job-description text
-- Build a structured candidate profile
-- Categorize technical and professional skills
-- Extract job requirements
-- Compare the candidate with the role
-- Identify missing or weaker skills
-- Generate actionable recommendations
-- Export structured results to `last_run_output.json`
-- Work offline with deterministic heuristics when `LLM_API_KEY` is not configured
-- Optionally use a configured LLM provider for agent reasoning
-
-## Usage
-
-Run the example input:
+## Setup
 
 ```bash
-python main.py
+pip install -r requirements.txt
+export ANTHROPIC_API_KEY=sk-ant-...   # optional — see below
 ```
 
-Analyze files by passing the resume first and the job description second:
+## Run
 
 ```bash
-python main.py path/to/resume.txt path/to/job_description.txt
+python main.py                              # runs the example from the spec
+python main.py my_resume.txt my_job.txt      # runs on your own files
 ```
 
-The command prints a formatted report and writes structured output to `last_run_output.json`.
+## With vs. without an API key
 
-## Configuration
+Every agent calls the Claude API (`llm_client.py`) for its actual reasoning
+step (parsing, categorizing, matching, prioritizing, recommending). If
+`ANTHROPIC_API_KEY` is not set, each agent transparently falls back to a
+deterministic offline heuristic (regex parsing, an alias table, exact-match
+skill comparison) so the pipeline still runs end-to-end for testing/demoing
+without a key or network access — just with less nuance than the LLM gives.
 
-Set `LLM_API_KEY` in the environment to enable the configured LLM provider. Without it, the application is designed to use its offline heuristic fallback.
+## Files
 
-PowerShell:
+- `schemas.py` — dataclasses for every structure passed between agents
+  (CandidateProfile, CategorizedSkills, JobRequirements, MatchAnalysis,
+  GapAnalysis, Recommendations).
+- `llm_client.py` — Claude API wrapper; JSON-in/JSON-out for every agent call.
+- `agents/` — one file per agent, each exposing a `run(...)` function.
+- `orchestrator.py` — chains the agents, catching per-agent failures so a
+  partial resume or malformed job description degrades gracefully instead
+  of crashing the whole run.
+- `report.py` — formats the final structured result into the report shown
+  in the spec (score bar, matching/missing skills, gaps, recommendations,
+  interview prep, learning path).
+- `main.py` — example usage / CLI entry point; also writes
+  `last_run_output.json` with the full structured data.
 
-```powershell
-$env:LLM_API_KEY = "your-api-key"
-python main.py
-```
+## Extending
 
-## Project status
-
-This is the initial repository upload. Add the remaining pipeline and supporting modules before treating the project as a runnable release.
+- **Skill aliases**: add entries to `ALIASES` in `agents/skill_agent.py`.
+- **New resume formats** (PDF/DOCX): parse to plain text before calling
+  `resume_agent.run()` — the agent itself only expects text in.
+- **Different LLM / provider**: swap the implementation inside
+  `llm_client.call_llm_json`; every agent only depends on that one function.

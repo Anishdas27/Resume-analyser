@@ -4,10 +4,10 @@ Main entry point / example usage.
 Run with:
     python main.py
 
-If LLM_API_KEY is set in the environment, every agent uses the
-configured LLM provider for its reasoning step. Otherwise each agent
-falls back to a deterministic offline heuristic, so the full pipeline
-still runs end-to-end (useful for testing/demoing without a key).
+If ANTHROPIC_API_KEY is set in the environment, every agent uses the
+Claude API for its reasoning step. Otherwise each agent falls back to
+a deterministic offline heuristic, so the full pipeline still runs
+end-to-end (useful for testing/demoing without a key).
 """
 
 import json
